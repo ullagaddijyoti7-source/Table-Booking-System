@@ -1,0 +1,1437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TableBook - Restaurant Reservation Management System</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#F5F3FF',
+                            100: '#EDE7FF', // Light Purple
+                            200: '#DDD6FE',
+                            500: '#8B5CF6', // Primary Purple
+                            600: '#7C3AED',
+                            700: '#6D28D9',
+                            800: '#5B21B6',
+                            900: '#4C1D95',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        .status-available { background-color: #10B981; color: white; }
+        .status-reserved { background-color: #F59E0B; color: white; }
+        .status-occupied { background-color: #EF4444; color: white; }
+        .status-out-of-service { background-color: #6B7280; color: white; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased flex flex-col min-h-screen">
+
+    <!-- Top Navigation Header -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="px-4 sm:px-6 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <button id="mobile-menu-btn" class="md:hidden text-slate-600 hover:text-brand-600 p-2 rounded-lg focus:outline-none">
+                    <i class="fa-solid fa-bars text-xl"></i>
+                </button>
+                <div class="flex items-center space-x-2">
+                    <div class="bg-brand-500 text-white p-2 rounded-xl shadow-md">
+                        <i class="fa-solid fa-utensils text-lg"></i>
+                    </div>
+                    <span class="text-xl font-bold tracking-tight text-slate-900">Table<span class="text-brand-500">Book</span></span>
+                    <span class="hidden sm:inline-block text-xs bg-brand-100 text-brand-700 px-2 py-0.5 rounded-full font-medium">India Edition (₹)</span>
+                </div>
+            </div>
+
+            <!-- Top Right Profile & Role Switcher -->
+            <div class="flex items-center space-x-4">
+                <!-- Role Selector -->
+                <div class="flex items-center space-x-2 bg-slate-100 p-1.5 rounded-xl text-xs font-medium border border-slate-200">
+                    <span class="text-slate-500 hidden sm:inline pl-1">Role:</span>
+                    <select id="user-role-select" onchange="changeUserRole(this.value)" class="bg-white border border-slate-300 text-slate-700 rounded-lg px-2 py-1 focus:ring-2 focus:ring-brand-500 outline-none cursor-pointer">
+                        <option value="Admin">Admin</option>
+                        <option value="Manager">Manager</option>
+                        <option value="Staff">Staff</option>
+                    </select>
+                </div>
+
+                <!-- User Profile -->
+                <div class="flex items-center space-x-3 border-l border-slate-200 pl-4">
+                    <div class="w-9 h-9 rounded-full bg-brand-500 text-white flex items-center justify-center font-bold text-sm shadow-sm" id="user-avatar">
+                        A
+                    </div>
+                    <div class="hidden md:block">
+                        <p class="text-sm font-semibold text-slate-800 leading-none" id="user-display-name">Admin User</p>
+                        <p class="text-xs text-slate-500 mt-1" id="user-display-role">System Admin</p>
+                    </div>
+                    <button onclick="simulateLogout()" class="text-slate-400 hover:text-red-500 p-1.5 rounded-lg transition" title="Logout">
+                        <i class="fa-solid fa-right-from-bracket text-lg"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden">
+        <!-- Sidebar Navigation -->
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-20 w-64 bg-white border-r border-slate-200 transform -translate-x-full md:translate-x-0 md:static transition-transform duration-200 ease-in-out flex flex-col justify-between pt-16 md:pt-0">
+            <div class="py-4 px-3 space-y-1 overflow-y-auto">
+                <div class="px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">Navigation</div>
+                
+                <a href="#dashboard" onclick="navigateTo('dashboard')" class="nav-item active flex items-center px-3 py-2.5 text-sm font-medium rounded-xl text-brand-700 bg-brand-50 hover:bg-brand-100 transition">
+                    <i class="fa-solid fa-chart-pie w-6 text-brand-500"></i>
+                    <span>Dashboard</span>
+                </a>
+                
+                <a href="#availability" onclick="navigateTo('availability')" class="nav-item flex items-center px-3 py-2.5 text-sm font-medium rounded-xl text-slate-600 hover:bg-slate-100 transition">
+                    <i class="fa-solid fa-magnifying-glass-calendar w-6 text-slate-400"></i>
+                    <span>Real-Time Check</span>
+                </a>
+
+                <a href="#layout" onclick="navigateTo('layout')" class="nav-item flex items-center px-3 py-2.5 text-sm font-medium rounded-xl text-slate-600 hover:bg-slate-100 transition">
+                    <i class="fa-solid fa-border-all w-6 text-slate-400"></i>
+                    <span>Table Floor Plan</span>
+                </a>
+
+                <a href="#tables" onclick="navigateTo('tables')" class="nav-item flex items-center px-3 py-2.5 text-sm font-medium rounded-xl text-slate-600 hover:bg-slate-100 transition">
+                    <i class="fa-solid fa-chair w-6 text-slate-400"></i>
+                    <span>Table Management</span>
+                </a>
+
+                <a href="#bookings" onclick="navigateTo('bookings')" class="nav-item flex items-center px-3 py-2.5 text-sm font-medium rounded-xl text-slate-600 hover:bg-slate-100 transition">
+                    <i class="fa-solid fa-book-bookmark w-6 text-slate-400"></i>
+                    <span>Bookings</span>
+                </a>
+
+                <a href="#calendar" onclick="navigateTo('calendar')" class="nav-item flex items-center px-3 py-2.5 text-sm font-medium rounded-xl text-slate-600 hover:bg-slate-100 transition">
+                    <i class="fa-solid fa-calendar-days w-6 text-slate-400"></i>
+                    <span>Booking Calendar</span>
+                </a>
+
+                <a href="#customers" onclick="navigateTo('customers')" class="nav-item flex items-center px-3 py-2.5 text-sm font-medium rounded-xl text-slate-600 hover:bg-slate-100 transition">
+                    <i class="fa-solid fa-users w-6 text-slate-400"></i>
+                    <span>Customers</span>
+                </a>
+
+                <a href="#reports" onclick="navigateTo('reports')" class="nav-item flex items-center px-3 py-2.5 text-sm font-medium rounded-xl text-slate-600 hover:bg-slate-100 transition">
+                    <i class="fa-solid fa-chart-line w-6 text-slate-400"></i>
+                    <span>Reports & Revenue</span>
+                </a>
+            </div>
+
+            <!-- Restaurant Quick Status Footer -->
+            <div class="p-4 border-t border-slate-100 bg-slate-50">
+                <div class="flex items-center justify-between text-xs text-slate-500 mb-1">
+                    <span>System Status</span>
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1 animate-pulse"></span> Live
+                    </span>
+                </div>
+                <p class="text-xs text-slate-400">Currency: <strong class="text-slate-700">INR (₹)</strong> | Phone: <strong class="text-slate-700">+91</strong></p>
+            </div>
+        </aside>
+
+        <!-- Overlay for mobile sidebar -->
+        <div id="sidebar-overlay" class="fixed inset-0 bg-slate-900/40 z-10 hidden md:hidden" onclick="toggleSidebar()"></div>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+            
+            <!-- Toast Notification Box -->
+            <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2"></div>
+
+            <!-- SECTION 1: DASHBOARD -->
+            <section id="section-dashboard" class="page-section space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h1 class="text-2xl font-bold text-slate-900">Dashboard Overview</h1>
+                        <p class="text-sm text-slate-500">Real-time status of your restaurant reservations and dining operations.</p>
+                    </div>
+                    <button onclick="openBookingModal()" class="inline-flex items-center justify-center px-4 py-2.5 bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium rounded-xl shadow-sm transition">
+                        <i class="fa-solid fa-plus mr-2"></i> New Reservation
+                    </button>
+                </div>
+
+                <!-- Overview Metrics Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Bookings</p>
+                            <h3 class="text-2xl font-bold text-slate-800 mt-1" id="stat-total-bookings">0</h3>
+                            <p class="text-xs text-emerald-600 mt-1 font-medium"><i class="fa-solid fa-arrow-up text-xs"></i> All time record</p>
+                        </div>
+                        <div class="w-12 h-12 bg-brand-100 text-brand-600 rounded-2xl flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-calendar-check"></i>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Today's Reservations</p>
+                            <h3 class="text-2xl font-bold text-slate-800 mt-1" id="stat-today-bookings">0</h3>
+                            <p class="text-xs text-slate-500 mt-1">For <span id="current-date-str">Today</span></p>
+                        </div>
+                        <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-clock"></i>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Table Occupancy</p>
+                            <h3 class="text-2xl font-bold text-slate-800 mt-1" id="stat-occupancy">0%</h3>
+                            <div class="w-28 bg-slate-100 h-2 rounded-full mt-2 overflow-hidden">
+                                <div id="stat-occupancy-bar" class="bg-brand-500 h-full rounded-full" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-chair"></i>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Revenue (INR)</p>
+                            <h3 class="text-2xl font-bold text-slate-800 mt-1" id="stat-revenue">₹0</h3>
+                            <p class="text-xs text-emerald-600 mt-1 font-medium"><i class="fa-solid fa-indian-rupee-sign text-xs"></i> Completed bookings</p>
+                        </div>
+                        <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-indian-rupee-sign"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dashboard Content Split -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Recent Bookings Table -->
+                    <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h3 class="font-bold text-slate-800 flex items-center">
+                                <i class="fa-solid fa-list-check text-brand-500 mr-2"></i> Recent Reservations
+                            </h3>
+                            <a href="#bookings" onclick="navigateTo('bookings')" class="text-xs text-brand-600 hover:text-brand-800 font-medium">View All →</a>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs sm:text-sm">
+                                <thead>
+                                    <tr class="text-slate-400 border-b border-slate-100 font-semibold uppercase text-[11px]">
+                                        <th class="pb-3">Customer</th>
+                                        <th class="pb-3">Table</th>
+                                        <th class="pb-3">Date & Time</th>
+                                        <th class="pb-3">Guests</th>
+                                        <th class="pb-3">Status</th>
+                                        <th class="pb-3 text-right">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dashboard-recent-bookings" class="divide-y divide-slate-100">
+                                    <!-- Dynamic Rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Table Live Status Summary -->
+                    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 space-y-4">
+                        <h3 class="font-bold text-slate-800 flex items-center">
+                            <i class="fa-solid fa-chart-donut text-brand-500 mr-2"></i> Table Status Summary
+                        </h3>
+                        <div class="space-y-3" id="dash-table-status-summary">
+                            <!-- Dynamic summary rows -->
+                        </div>
+                        <div class="pt-3 border-t border-slate-100">
+                            <a href="#layout" onclick="navigateTo('layout')" class="w-full py-2 bg-brand-50 text-brand-700 hover:bg-brand-100 rounded-xl text-xs font-semibold flex items-center justify-center transition">
+                                Open Floor Plan Visualizer <i class="fa-solid fa-arrow-right ml-2"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 2: REAL-TIME AVAILABILITY CHECKER -->
+            <section id="section-availability" class="page-section hidden space-y-6">
+                <div>
+                    <h1 class="text-2xl font-bold text-slate-900">Real-Time Table Availability</h1>
+                    <p class="text-sm text-slate-500">Search available tables by party size, date, and preferred time slot.</p>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+                    <form id="availability-form" onsubmit="checkAvailability(event)" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Date</label>
+                            <input type="date" id="avail-date" required class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Time Slot</label>
+                            <select id="avail-time" required class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                                <option value="12:00 PM">12:00 PM (Lunch)</option>
+                                <option value="01:00 PM">01:00 PM (Lunch)</option>
+                                <option value="02:00 PM">02:00 PM (Lunch)</option>
+                                <option value="07:00 PM" selected>07:00 PM (Dinner)</option>
+                                <option value="08:00 PM">08:00 PM (Dinner)</option>
+                                <option value="09:00 PM">09:00 PM (Dinner)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Party Size (Guests)</label>
+                            <input type="number" id="avail-guests" min="1" max="20" value="2" required class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                        </div>
+                        <div class="flex items-end">
+                            <button type="submit" class="w-full bg-brand-500 hover:bg-brand-600 text-white font-medium py-2 px-4 rounded-xl text-sm shadow-sm transition">
+                                <i class="fa-solid fa-magnifying-glass mr-2"></i> Check Availability
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Results Grid -->
+                <div>
+                    <h2 class="text-lg font-bold text-slate-800 mb-3">Available Tables</h2>
+                    <div id="availability-results" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        <!-- Dynamic Cards -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 3: TABLE LAYOUT VISUALIZATION -->
+            <section id="section-layout" class="page-section hidden space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h1 class="text-2xl font-bold text-slate-900">Table Floor Plan Visualization</h1>
+                        <p class="text-sm text-slate-500">Visual representation of tables by floor and live status.</p>
+                    </div>
+                    <!-- Floor Selector -->
+                    <div class="inline-flex bg-slate-200 p-1 rounded-xl text-xs font-semibold">
+                        <button onclick="filterFloorPlan('All')" class="floor-btn active px-3 py-1.5 rounded-lg bg-white text-slate-800 shadow-sm">All Floors</button>
+                        <button onclick="filterFloorPlan('Ground')" class="floor-btn px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900">Ground Floor</button>
+                        <button onclick="filterFloorPlan('First')" class="floor-btn px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900">First Floor</button>
+                    </div>
+                </div>
+
+                <!-- Legend -->
+                <div class="flex flex-wrap items-center gap-4 bg-white p-3 rounded-xl border border-slate-200 text-xs font-medium">
+                    <span class="text-slate-400 uppercase font-semibold text-[10px]">Legend:</span>
+                    <span class="flex items-center"><span class="w-3 h-3 rounded-full bg-emerald-500 mr-1.5"></span> Available</span>
+                    <span class="flex items-center"><span class="w-3 h-3 rounded-full bg-amber-500 mr-1.5"></span> Reserved</span>
+                    <span class="flex items-center"><span class="w-3 h-3 rounded-full bg-red-500 mr-1.5"></span> Occupied</span>
+                    <span class="flex items-center"><span class="w-3 h-3 rounded-full bg-slate-500 mr-1.5"></span> Out of Service</span>
+                </div>
+
+                <!-- Visual Grid -->
+                <div id="floor-plan-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                    <!-- Dynamic Table Floor Plan Widgets -->
+                </div>
+            </section>
+
+            <!-- SECTION 4: TABLE MANAGEMENT (CRUD) -->
+            <section id="section-tables" class="page-section hidden space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h1 class="text-2xl font-bold text-slate-900">Table Management</h1>
+                        <p class="text-sm text-slate-500">Add, edit, or update table configuration and seating capacity.</p>
+                    </div>
+                    <button onclick="openTableModal()" class="inline-flex items-center justify-center px-4 py-2.5 bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium rounded-xl shadow-sm transition">
+                        <i class="fa-solid fa-plus mr-2"></i> Add New Table
+                    </button>
+                </div>
+
+                <!-- Table Master List -->
+                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-50 text-slate-500 font-semibold uppercase text-xs border-b border-slate-200">
+                                <tr>
+                                    <th class="p-4">Table Name</th>
+                                    <th class="p-4">Capacity</th>
+                                    <th class="p-4">Location</th>
+                                    <th class="p-4">Floor</th>
+                                    <th class="p-4">Status</th>
+                                    <th class="p-4 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tables-list-tbody" class="divide-y divide-slate-100">
+                                <!-- Dynamic Rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 5: BOOKING MANAGEMENT (CRUD) -->
+            <section id="section-bookings" class="page-section hidden space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h1 class="text-2xl font-bold text-slate-900">Booking Management</h1>
+                        <p class="text-sm text-slate-500">Manage all customer reservations, seating, and billing in ₹ INR.</p>
+                    </div>
+                    <button onclick="openBookingModal()" class="inline-flex items-center justify-center px-4 py-2.5 bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium rounded-xl shadow-sm transition">
+                        <i class="fa-solid fa-plus mr-2"></i> Create Booking
+                    </button>
+                </div>
+
+                <!-- Filters -->
+                <div class="flex flex-wrap items-center gap-3 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div class="flex-1 min-w-[200px]">
+                        <input type="text" id="booking-search" oninput="renderBookings()" placeholder="Search by customer name or phone..." class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                    </div>
+                    <div>
+                        <select id="booking-status-filter" onchange="renderBookings()" class="border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                            <option value="All">All Statuses</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Confirmed">Confirmed</option>
+                            <option value="Seated">Seated</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Bookings Table -->
+                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-50 text-slate-500 font-semibold uppercase text-xs border-b border-slate-200">
+                                <tr>
+                                    <th class="p-4">Customer Details</th>
+                                    <th class="p-4">Assigned Table</th>
+                                    <th class="p-4">Date & Time</th>
+                                    <th class="p-4">Party Size</th>
+                                    <th class="p-4">Deposit / Revenue</th>
+                                    <th class="p-4">Status</th>
+                                    <th class="p-4 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bookings-list-tbody" class="divide-y divide-slate-100">
+                                <!-- Dynamic Rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 6: BOOKING CALENDAR -->
+            <section id="section-calendar" class="page-section hidden space-y-6">
+                <div>
+                    <h1 class="text-2xl font-bold text-slate-900">Booking Calendar</h1>
+                    <p class="text-sm text-slate-500">Overview of scheduled bookings organized by calendar date.</p>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+                    <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+                        <h2 class="text-lg font-bold text-slate-800" id="calendar-month-year">July 2026</h2>
+                        <div class="flex space-x-2">
+                            <button onclick="changeCalendarMonth(-1)" class="px-3 py-1.5 border border-slate-200 rounded-xl hover:bg-slate-50 text-sm font-medium"><i class="fa-solid fa-chevron-left"></i> Prev</button>
+                            <button onclick="changeCalendarMonth(1)" class="px-3 py-1.5 border border-slate-200 rounded-xl hover:bg-slate-50 text-sm font-medium">Next <i class="fa-solid fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+
+                    <!-- Calendar Grid Header -->
+                    <div class="grid grid-cols-7 gap-1 text-center font-bold text-xs text-slate-400 uppercase py-2">
+                        <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+                    </div>
+                    <!-- Calendar Days Grid -->
+                    <div id="calendar-days-grid" class="grid grid-cols-7 gap-2">
+                        <!-- Dynamic Days -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 7: CUSTOMER MANAGEMENT -->
+            <section id="section-customers" class="page-section hidden space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h1 class="text-2xl font-bold text-slate-900">Customer Management</h1>
+                        <p class="text-sm text-slate-500">Manage customer profiles, Indian mobile numbers (+91), and dining history.</p>
+                    </div>
+                    <button onclick="openCustomerModal()" class="inline-flex items-center justify-center px-4 py-2.5 bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium rounded-xl shadow-sm transition">
+                        <i class="fa-solid fa-user-plus mr-2"></i> Add Customer
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-50 text-slate-500 font-semibold uppercase text-xs border-b border-slate-200">
+                                <tr>
+                                    <th class="p-4">Customer Name</th>
+                                    <th class="p-4">Indian Mobile (+91)</th>
+                                    <th class="p-4">Email</th>
+                                    <th class="p-4">Total Visits</th>
+                                    <th class="p-4">Preferences / Notes</th>
+                                    <th class="p-4 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="customers-list-tbody" class="divide-y divide-slate-100">
+                                <!-- Dynamic Rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 8: REPORTS & REVENUE -->
+            <section id="section-reports" class="page-section hidden space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h1 class="text-2xl font-bold text-slate-900">Reports & Analytics</h1>
+                        <p class="text-sm text-slate-500">Detailed analytics, table occupancy, and revenue generated in Indian Rupees (₹).</p>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="exportReport('CSV')" class="px-4 py-2 border border-slate-300 hover:bg-slate-50 font-medium text-slate-700 rounded-xl text-sm transition">
+                            <i class="fa-solid fa-file-csv mr-1.5 text-emerald-600"></i> Export CSV
+                        </button>
+                        <button onclick="exportReport('PDF')" class="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-xl text-sm transition shadow-sm">
+                            <i class="fa-solid fa-file-pdf mr-1.5"></i> Export Report
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Summary Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+                        <p class="text-xs font-semibold text-slate-400 uppercase">Total Revenue (₹)</p>
+                        <h3 class="text-2xl font-bold text-slate-800 mt-1" id="report-total-revenue">₹0</h3>
+                        <p class="text-xs text-slate-500 mt-1">Calculated from completed bookings</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+                        <p class="text-xs font-semibold text-slate-400 uppercase">Average Ticket / Booking</p>
+                        <h3 class="text-2xl font-bold text-slate-800 mt-1" id="report-avg-revenue">₹0</h3>
+                        <p class="text-xs text-slate-500 mt-1">Average spend per reservation</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+                        <p class="text-xs font-semibold text-slate-400 uppercase">Most Popular Table Type</p>
+                        <h3 class="text-2xl font-bold text-brand-600 mt-1" id="report-popular-type">4-Seater</h3>
+                        <p class="text-xs text-slate-500 mt-1">Based on historical reservation count</p>
+                    </div>
+                </div>
+
+                <!-- Breakdown Cards -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+                        <h3 class="font-bold text-slate-800">Booking Status Breakdown</h3>
+                        <div id="report-status-breakdown" class="space-y-3">
+                            <!-- Dynamic Bars -->
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+                        <h3 class="font-bold text-slate-800">Automated System Confirmations</h3>
+                        <p class="text-xs text-slate-500">Log of automated simulated confirmations sent to customer Indian phone numbers (+91) or emails.</p>
+                        <div id="report-logs" class="space-y-2 max-h-60 overflow-y-auto font-mono text-xs text-slate-600">
+                            <!-- Simulated Logs -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- MODAL 1: ADD/EDIT TABLE -->
+    <div id="modal-table" class="fixed inset-0 z-50 bg-slate-900/50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 class="text-lg font-bold text-slate-900" id="modal-table-title">Add Table</h3>
+                <button onclick="closeModal('modal-table')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="table-form" onsubmit="saveTable(event)" class="space-y-3">
+                <input type="hidden" id="table-id">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Table Name/Code</label>
+                    <input type="text" id="table-name" required placeholder="e.g. Table A1" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Capacity (Seats)</label>
+                    <input type="number" id="table-capacity" min="1" max="20" required placeholder="e.g. 4" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Location</label>
+                        <select id="table-location" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                            <option value="Window">Window</option>
+                            <option value="Center">Center</option>
+                            <option value="Private">Private VIP</option>
+                            <option value="Outdoor">Outdoor Deck</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Floor</label>
+                        <select id="table-floor" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                            <option value="Ground">Ground</option>
+                            <option value="First">First</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Status</label>
+                    <select id="table-status" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                        <option value="Available">Available</option>
+                        <option value="Reserved">Reserved</option>
+                        <option value="Occupied">Occupied</option>
+                        <option value="Out of Service">Out of Service</option>
+                    </select>
+                </div>
+                <div class="pt-3 flex justify-end space-x-2">
+                    <button type="button" onclick="closeModal('modal-table')" class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl">Cancel</button>
+                    <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-brand-500 hover:bg-brand-600 rounded-xl">Save Table</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: ADD/EDIT BOOKING -->
+    <div id="modal-booking" class="fixed inset-0 z-50 bg-slate-900/50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 class="text-lg font-bold text-slate-900" id="modal-booking-title">Create Reservation</h3>
+                <button onclick="closeModal('modal-booking')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="booking-form" onsubmit="saveBooking(event)" class="space-y-3">
+                <input type="hidden" id="booking-id">
+
+                <!-- Customer Details -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Customer Name</label>
+                        <input type="text" id="booking-cust-name" required placeholder="e.g. Rajesh Kumar" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Indian Mobile (+91)</label>
+                        <div class="flex">
+                            <span class="inline-flex items-center px-3 rounded-l-xl border border-r-0 border-slate-300 bg-slate-100 text-slate-500 text-xs font-bold">+91</span>
+                            <input type="tel" id="booking-cust-phone" pattern="[6-9][0-9]{9}" maxlength="10" required placeholder="10-digit number" class="w-full border border-slate-300 rounded-r-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                        </div>
+                        <span class="text-[10px] text-slate-400">Must be a valid 10-digit number starting with 6-9</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Select Table</label>
+                        <select id="booking-table-id" required class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                            <!-- Dynamic Table Options -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Party Size (Guests)</label>
+                        <input type="number" id="booking-party-size" min="1" max="20" required value="2" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Booking Date</label>
+                        <input type="date" id="booking-date" required class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Booking Time</label>
+                        <select id="booking-time" required class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                            <option value="12:00 PM">12:00 PM</option>
+                            <option value="01:00 PM">01:00 PM</option>
+                            <option value="02:00 PM">02:00 PM</option>
+                            <option value="07:00 PM">07:00 PM</option>
+                            <option value="08:00 PM">08:00 PM</option>
+                            <option value="09:00 PM">09:00 PM</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Amount / Deposit (INR ₹)</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 font-semibold text-xs">₹</span>
+                            <input type="number" id="booking-amount" min="0" step="50" required placeholder="500" class="w-full border border-slate-300 rounded-xl pl-7 pr-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Booking Status</label>
+                        <select id="booking-status" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                            <option value="Pending">Pending</option>
+                            <option value="Confirmed">Confirmed</option>
+                            <option value="Seated">Seated</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Special Requests / Occasion</label>
+                    <textarea id="booking-requests" rows="2" placeholder="e.g. Birthday celebration, Window seat request" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none"></textarea>
+                </div>
+
+                <div class="pt-3 flex justify-end space-x-2">
+                    <button type="button" onclick="closeModal('modal-booking')" class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl">Cancel</button>
+                    <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-brand-500 hover:bg-brand-600 rounded-xl">Save Reservation</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 3: ADD CUSTOMER -->
+    <div id="modal-customer" class="fixed inset-0 z-50 bg-slate-900/50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 class="text-lg font-bold text-slate-900">Add Customer Profile</h3>
+                <button onclick="closeModal('modal-customer')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="customer-form" onsubmit="saveCustomer(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Customer Full Name</label>
+                    <input type="text" id="cust-name" required placeholder="e.g. Ananya Sharma" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Indian Mobile Number (+91)</label>
+                    <div class="flex">
+                        <span class="inline-flex items-center px-3 rounded-l-xl border border-r-0 border-slate-300 bg-slate-100 text-slate-500 text-xs font-bold">+91</span>
+                        <input type="tel" id="cust-phone" pattern="[6-9][0-9]{9}" maxlength="10" required placeholder="9876543210" class="w-full border border-slate-300 rounded-r-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Email Address</label>
+                    <input type="email" id="cust-email" placeholder="customer@example.in" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Preferences & Notes</label>
+                    <textarea id="cust-pref" rows="2" placeholder="e.g. Prefers vegetarian meal, allergic to nuts" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none"></textarea>
+                </div>
+                <div class="pt-3 flex justify-end space-x-2">
+                    <button type="button" onclick="closeModal('modal-customer')" class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl">Cancel</button>
+                    <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-brand-500 hover:bg-brand-600 rounded-xl">Save Profile</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // GLOBAL IN-MEMORY / LOCALSTORAGE DATA MANAGEMENT
+        let currentRole = 'Admin';
+        let currentCalendarDate = new Date();
+
+        // Initial Sample Data (India Specific Format & Currency)
+        let tables = JSON.parse(localStorage.getItem('tb_tables')) || [
+            { id: 1, name: "Table A1", capacity: 2, location: "Window", status: "Available", floor: "Ground" },
+            { id: 2, name: "Table B2", capacity: 4, location: "Center", status: "Available", floor: "Ground" },
+            { id: 3, name: "Table C1", capacity: 6, location: "Private", status: "Reserved", floor: "First" },
+            { id: 4, name: "Table D4", capacity: 8, location: "Outdoor", status: "Occupied", floor: "Ground" },
+            { id: 5, name: "VIP Table 1", capacity: 6, location: "Private", status: "Available", floor: "First" },
+            { id: 6, name: "Table A2", capacity: 2, location: "Window", status: "Out of Service", floor: "Ground" }
+        ];
+
+        let customers = JSON.parse(localStorage.getItem('tb_customers')) || [
+            { id: 1, name: "Aarav Mehta", phone: "9876543210", email: "aarav.mehta@example.in", preferences: "Prefers Window seats", total_visits: 4 },
+            { id: 2, name: "Priya Sharma", phone: "9812345678", email: "priya.s@example.in", preferences: "Vegetarian, Birthday celebration", total_visits: 2 },
+            { id: 3, name: "Rohan Verma", phone: "8899001122", email: "rohan.v@gmail.com", preferences: "Prefers Quiet corner", total_visits: 1 }
+        ];
+
+        let bookings = JSON.parse(localStorage.getItem('tb_bookings')) || [
+            { id: 101, table_id: 3, customer_name: "Priya Sharma", customer_phone: "9812345678", date: getTodayStr(), time: "07:00 PM", party_size: 4, status: "Reserved", amount: 1500, requests: "Anniversary Celebration" },
+            { id: 102, table_id: 4, customer_name: "Aarav Mehta", customer_phone: "9876543210", date: getTodayStr(), time: "08:00 PM", party_size: 6, status: "Seated", amount: 2500, requests: "Window preferred" },
+            { id: 103, table_id: 1, customer_name: "Rohan Verma", customer_phone: "8899001122", date: getTodayStr(), time: "01:00 PM", party_size: 2, status: "Completed", amount: 1200, requests: "None" }
+        ];
+
+        let confirmationLogs = [
+            `[${new Date().toLocaleTimeString()}] Confirmation SMS sent to +91 9812345678 for Booking #101`,
+            `[${new Date().toLocaleTimeString()}] Instant WhatsApp alert triggered to +91 9876543210 (Table D4)`
+        ];
+
+        // INITIALIZATION
+        window.onload = function() {
+            // Set current date in dashboard
+            document.getElementById('current-date-str').textContent = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+            document.getElementById('avail-date').value = getTodayStr();
+            document.getElementById('booking-date').value = getTodayStr();
+
+            saveDataToStorage();
+            refreshAllViews();
+        };
+
+        function saveDataToStorage() {
+            localStorage.setItem('tb_tables', JSON.stringify(tables));
+            localStorage.setItem('tb_customers', JSON.stringify(customers));
+            localStorage.setItem('tb_bookings', JSON.stringify(bookings));
+        }
+
+        function getTodayStr() {
+            const today = new Date();
+            return today.toISOString().split('T')[0];
+        }
+
+        // NAVIGATION & ROUTING
+        function navigateTo(sectionId) {
+            document.querySelectorAll('.page-section').forEach(sec => sec.classList.add('hidden'));
+            const target = document.getElementById(`section-${sectionId}`);
+            if(target) target.classList.remove('hidden');
+
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active', 'bg-brand-50', 'text-brand-700');
+                item.classList.add('text-slate-600');
+            });
+
+            const activeLink = document.querySelector(`.nav-item[href="#${sectionId}"]`);
+            if(activeLink) {
+                activeLink.classList.add('active', 'bg-brand-50', 'text-brand-700');
+            }
+
+            // Close sidebar on mobile
+            document.getElementById('sidebar').classList.add('-translate-x-full');
+            document.getElementById('sidebar-overlay').classList.add('hidden');
+
+            // Refresh view logic
+            refreshAllViews();
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
+        }
+
+        document.getElementById('mobile-menu-btn').addEventListener('click', toggleSidebar);
+
+        // ROLE MANAGEMENT
+        function changeUserRole(role) {
+            currentRole = role;
+            document.getElementById('user-display-role').textContent = role === 'Admin' ? 'System Admin' : (role === 'Manager' ? 'Restaurant Manager' : 'Front Desk Staff');
+            document.getElementById('user-avatar').textContent = role.charAt(0);
+            showToast(`Switched user role to ${role}`);
+        }
+
+        function simulateLogout() {
+            showToast('Simulated logout successfully!', 'info');
+        }
+
+        // VIEW REFRESH CONTROLLER
+        function refreshAllViews() {
+            renderDashboard();
+            renderTablesList();
+            renderFloorPlan('All');
+            renderBookings();
+            renderCalendar();
+            renderCustomers();
+            renderReports();
+        }
+
+        // FORMATTING HELPERS
+        function formatINR(val) {
+            return '₹' + Number(val).toLocaleString('en-IN');
+        }
+
+        function formatPhone(phone) {
+            if(!phone) return '+91 N/A';
+            const clean = phone.replace(/\D/g, '');
+            if(clean.length === 10) {
+                return `+91 ${clean.slice(0, 5)} ${clean.slice(5)}`;
+            }
+            return `+91 ${phone}`;
+        }
+
+        // -------------------------------------------------------------
+        // MODULE 1: DASHBOARD
+        // -------------------------------------------------------------
+        function renderDashboard() {
+            const totalBookings = bookings.length;
+            const todayStr = getTodayStr();
+            const todayBookings = bookings.filter(b => b.date === todayStr);
+            
+            const occupiedCount = tables.filter(t => t.status === 'Occupied').length;
+            const occupancyPct = tables.length > 0 ? Math.round((occupiedCount / tables.length) * 100) : 0;
+
+            const totalRevenue = bookings
+                .filter(b => b.status === 'Completed' || b.status === 'Seated' || b.status === 'Confirmed')
+                .reduce((sum, b) => sum + (Number(b.amount) || 0), 0);
+
+            document.getElementById('stat-total-bookings').textContent = totalBookings;
+            document.getElementById('stat-today-bookings').textContent = todayBookings.length;
+            document.getElementById('stat-occupancy').textContent = `${occupancyPct}%`;
+            document.getElementById('stat-occupancy-bar').style.width = `${occupancyPct}%`;
+            document.getElementById('stat-revenue').textContent = formatINR(totalRevenue);
+
+            // Dashboard Recent Bookings
+            const recentTbody = document.getElementById('dashboard-recent-bookings');
+            recentTbody.innerHTML = '';
+
+            const recentList = [...bookings].reverse().slice(0, 5);
+            if(recentList.length === 0) {
+                recentTbody.innerHTML = `<tr><td colspan="6" class="py-4 text-center text-slate-400">No reservations found</td></tr>`;
+            } else {
+                recentList.forEach(b => {
+                    const tbl = tables.find(t => t.id == b.table_id);
+                    const tblName = tbl ? tbl.name : `Table #${b.table_id}`;
+                    recentTbody.innerHTML += `
+                        <tr class="hover:bg-slate-50">
+                            <td class="py-3 font-medium text-slate-800">${b.customer_name}<br><span class="text-[11px] text-slate-400">${formatPhone(b.customer_phone)}</span></td>
+                            <td class="py-3"><span class="px-2 py-1 bg-slate-100 font-semibold text-slate-700 rounded-md text-xs">${tblName}</span></td>
+                            <td class="py-3">${b.date}<br><span class="text-xs text-slate-400">${b.time}</span></td>
+                            <td class="py-3">${b.party_size} Guests</td>
+                            <td class="py-3">${getStatusBadge(b.status)}</td>
+                            <td class="py-3 text-right font-bold text-slate-700">${formatINR(b.amount)}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            // Table Status Breakdown Summary
+            const statusSummary = document.getElementById('dash-table-status-summary');
+            const availableCount = tables.filter(t => t.status === 'Available').length;
+            const reservedCount = tables.filter(t => t.status === 'Reserved').length;
+            const outCount = tables.filter(t => t.status === 'Out of Service').length;
+
+            statusSummary.innerHTML = `
+                <div class="flex items-center justify-between text-xs">
+                    <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-2"></span> Available</span>
+                    <span class="font-bold text-slate-700">${availableCount} Tables</span>
+                </div>
+                <div class="flex items-center justify-between text-xs">
+                    <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-amber-500 mr-2"></span> Reserved</span>
+                    <span class="font-bold text-slate-700">${reservedCount} Tables</span>
+                </div>
+                <div class="flex items-center justify-between text-xs">
+                    <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-red-500 mr-2"></span> Occupied</span>
+                    <span class="font-bold text-slate-700">${occupiedCount} Tables</span>
+                </div>
+                <div class="flex items-center justify-between text-xs">
+                    <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-slate-500 mr-2"></span> Out of Service</span>
+                    <span class="font-bold text-slate-700">${outCount} Tables</span>
+                </div>
+            `;
+        }
+
+        function getStatusBadge(status) {
+            let color = 'bg-slate-100 text-slate-700';
+            if(status === 'Confirmed') color = 'bg-emerald-100 text-emerald-800';
+            else if(status === 'Seated') color = 'bg-blue-100 text-blue-800';
+            else if(status === 'Reserved') color = 'bg-amber-100 text-amber-800';
+            else if(status === 'Completed') color = 'bg-purple-100 text-purple-800';
+            else if(status === 'Cancelled') color = 'bg-red-100 text-red-800';
+            return `<span class="px-2 py-0.5 rounded-full text-[11px] font-semibold ${color}">${status}</span>`;
+        }
+
+        // -------------------------------------------------------------
+        // MODULE 2: REAL-TIME AVAILABILITY
+        // -------------------------------------------------------------
+        function checkAvailability(e) {
+            if(e) e.preventDefault();
+            const date = document.getElementById('avail-date').value;
+            const time = document.getElementById('avail-time').value;
+            const guests = parseInt(document.getElementById('avail-guests').value);
+
+            // Find booked table IDs at date/time
+            const bookedTableIds = bookings
+                .filter(b => b.date === date && b.time === time && b.status !== 'Cancelled')
+                .map(b => b.table_id);
+
+            const availableTables = tables.filter(t => 
+                t.capacity >= guests && 
+                t.status !== 'Out of Service' && 
+                !bookedTableIds.includes(t.id)
+            );
+
+            const resultsGrid = document.getElementById('availability-results');
+            resultsGrid.innerHTML = '';
+
+            if(availableTables.length === 0) {
+                resultsGrid.innerHTML = `<div class="col-span-full p-8 bg-white rounded-2xl border text-center text-slate-400">No tables available matching your exact capacity/time preference.</div>`;
+                return;
+            }
+
+            availableTables.forEach(t => {
+                resultsGrid.innerHTML += `
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3 hover:border-brand-300 transition">
+                        <div class="flex items-center justify-between">
+                            <h3 class="font-bold text-slate-800 text-base">${t.name}</h3>
+                            <span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 font-semibold rounded-full text-xs">Available</span>
+                        </div>
+                        <p class="text-xs text-slate-500"><i class="fa-solid fa-users mr-1"></i> Capacity: ${t.capacity} Persons</p>
+                        <p class="text-xs text-slate-500"><i class="fa-solid fa-location-dot mr-1"></i> ${t.location} (${t.floor} Floor)</p>
+                        <button onclick="quickBookTable(${t.id}, '${date}', '${time}', ${guests})" class="w-full py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-xl text-xs font-semibold shadow-sm transition">
+                            Book Now
+                        </button>
+                    </div>
+                `;
+            });
+        }
+
+        function quickBookTable(tableId, date, time, guests) {
+            openBookingModal();
+            document.getElementById('booking-table-id').value = tableId;
+            document.getElementById('booking-date').value = date;
+            document.getElementById('booking-time').value = time;
+            document.getElementById('booking-party-size').value = guests;
+        }
+
+        // -------------------------------------------------------------
+        // MODULE 3: TABLE FLOOR PLAN VISUALIZATION
+        // -------------------------------------------------------------
+        function renderFloorPlan(floorFilter) {
+            const grid = document.getElementById('floor-plan-grid');
+            grid.innerHTML = '';
+
+            const filtered = floorFilter === 'All' ? tables : tables.filter(t => t.floor === floorFilter);
+
+            filtered.forEach(t => {
+                let badgeClass = 'status-available';
+                if(t.status === 'Reserved') badgeClass = 'status-reserved';
+                else if(t.status === 'Occupied') badgeClass = 'status-occupied';
+                else if(t.status === 'Out of Service') badgeClass = 'status-out-of-service';
+
+                grid.innerHTML += `
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm text-center flex flex-col justify-between space-y-3 hover:shadow-md transition">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] uppercase tracking-wider text-slate-400 font-bold">${t.floor} Floor</span>
+                            <span class="w-2.5 h-2.5 rounded-full ${t.status === 'Available' ? 'bg-emerald-500' : (t.status === 'Reserved' ? 'bg-amber-500' : (t.status === 'Occupied' ? 'bg-red-500' : 'bg-slate-400'))}"></span>
+                        </div>
+                        <div class="py-2">
+                            <i class="fa-solid fa-utensils text-2xl text-slate-300 mb-1"></i>
+                            <h4 class="font-bold text-slate-800 text-sm">${t.name}</h4>
+                            <p class="text-xs text-slate-400">${t.capacity} Seats • ${t.location}</p>
+                        </div>
+                        <span class="px-2 py-1 text-xs rounded-xl font-semibold ${badgeClass}">
+                            ${t.status}
+                        </span>
+                    </div>
+                `;
+            });
+        }
+
+        function filterFloorPlan(floor) {
+            document.querySelectorAll('.floor-btn').forEach(btn => {
+                btn.classList.remove('bg-white', 'text-slate-800', 'shadow-sm');
+                btn.classList.add('text-slate-600');
+            });
+            event.target.classList.add('bg-white', 'text-slate-800', 'shadow-sm');
+            renderFloorPlan(floor);
+        }
+
+        // -------------------------------------------------------------
+        // MODULE 4: TABLE MANAGEMENT (CRUD)
+        // -------------------------------------------------------------
+        function renderTablesList() {
+            const tbody = document.getElementById('tables-list-tbody');
+            tbody.innerHTML = '';
+
+            tables.forEach(t => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-4 font-semibold text-slate-800">${t.name}</td>
+                        <td class="p-4 text-slate-600">${t.capacity} Persons</td>
+                        <td class="p-4 text-slate-600">${t.location}</td>
+                        <td class="p-4 text-slate-600">${t.floor} Floor</td>
+                        <td class="p-4">
+                            <select onchange="updateTableStatusDirect(${t.id}, this.value)" class="text-xs border border-slate-300 rounded-lg px-2 py-1 font-semibold focus:ring-1 focus:ring-brand-500">
+                                <option value="Available" ${t.status==='Available'?'selected':''}>Available</option>
+                                <option value="Reserved" ${t.status==='Reserved'?'selected':''}>Reserved</option>
+                                <option value="Occupied" ${t.status==='Occupied'?'selected':''}>Occupied</option>
+                                <option value="Out of Service" ${t.status==='Out of Service'?'selected':''}>Out of Service</option>
+                            </select>
+                        </td>
+                        <td class="p-4 text-right space-x-2">
+                            <button onclick="editTable(${t.id})" class="text-brand-600 hover:text-brand-800 p-1"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button onclick="deleteTable(${t.id})" class="text-red-500 hover:text-red-700 p-1"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function openTableModal(tableId = null) {
+            document.getElementById('table-form').reset();
+            document.getElementById('table-id').value = '';
+            document.getElementById('modal-table-title').textContent = tableId ? 'Edit Table' : 'Add New Table';
+
+            if(tableId) {
+                const t = tables.find(item => item.id === tableId);
+                if(t) {
+                    document.getElementById('table-id').value = t.id;
+                    document.getElementById('table-name').value = t.name;
+                    document.getElementById('table-capacity').value = t.capacity;
+                    document.getElementById('table-location').value = t.location;
+                    document.getElementById('table-floor').value = t.floor;
+                    document.getElementById('table-status').value = t.status;
+                }
+            }
+            document.getElementById('modal-table').classList.remove('hidden');
+        }
+
+        function saveTable(e) {
+            e.preventDefault();
+            const id = document.getElementById('table-id').value;
+            const name = document.getElementById('table-name').value;
+            const capacity = parseInt(document.getElementById('table-capacity').value);
+            const location = document.getElementById('table-location').value;
+            const floor = document.getElementById('table-floor').value;
+            const status = document.getElementById('table-status').value;
+
+            if(id) {
+                // Update
+                const index = tables.findIndex(t => t.id == id);
+                if(index !== -1) {
+                    tables[index] = { id: parseInt(id), name, capacity, location, floor, status };
+                    showToast('Table updated successfully');
+                }
+            } else {
+                // Create
+                const newId = tables.length > 0 ? Math.max(...tables.map(t => t.id)) + 1 : 1;
+                tables.push({ id: newId, name, capacity, location, floor, status });
+                showToast('New table added');
+            }
+
+            saveDataToStorage();
+            closeModal('modal-table');
+            refreshAllViews();
+        }
+
+        function updateTableStatusDirect(id, status) {
+            const t = tables.find(item => item.id === id);
+            if(t) {
+                t.status = status;
+                saveDataToStorage();
+                refreshAllViews();
+                showToast(`Status of ${t.name} changed to ${status}`);
+            }
+        }
+
+        function editTable(id) {
+            openTableModal(id);
+        }
+
+        function deleteTable(id) {
+            if(confirm('Are you sure you want to delete this table?')) {
+                tables = tables.filter(t => t.id !== id);
+                saveDataToStorage();
+                refreshAllViews();
+                showToast('Table removed', 'info');
+            }
+        }
+
+        // -------------------------------------------------------------
+        // MODULE 5: BOOKING MANAGEMENT (CRUD)
+        // -------------------------------------------------------------
+        function renderBookings() {
+            const tbody = document.getElementById('bookings-list-tbody');
+            tbody.innerHTML = '';
+
+            const search = document.getElementById('booking-search').value.toLowerCase();
+            const statusFilter = document.getElementById('booking-status-filter').value;
+
+            const filtered = bookings.filter(b => {
+                const matchSearch = b.customer_name.toLowerCase().includes(search) || b.customer_phone.includes(search);
+                const matchStatus = statusFilter === 'All' || b.status === statusFilter;
+                return matchSearch && matchStatus;
+            });
+
+            if(filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">No matching reservations found</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(b => {
+                const tbl = tables.find(t => t.id == b.table_id);
+                const tblName = tbl ? tbl.name : `Table #${b.table_id}`;
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-4 font-semibold text-slate-800">
+                            ${b.customer_name}
+                            <div class="text-xs text-slate-500 font-normal">${formatPhone(b.customer_phone)}</div>
+                        </td>
+                        <td class="p-4"><span class="px-2.5 py-1 bg-slate-100 rounded-lg text-xs font-semibold text-slate-700">${tblName}</span></td>
+                        <td class="p-4">${b.date}<br><span class="text-xs text-slate-400">${b.time}</span></td>
+                        <td class="p-4 text-slate-700">${b.party_size} Guests</td>
+                        <td class="p-4 font-bold text-slate-800">${formatINR(b.amount)}</td>
+                        <td class="p-4">${getStatusBadge(b.status)}</td>
+                        <td class="p-4 text-right space-x-2">
+                            <button onclick="editBooking(${b.id})" class="text-brand-600 hover:text-brand-800 p-1"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button onclick="cancelBooking(${b.id})" class="text-red-500 hover:text-red-700 p-1" title="Cancel Booking"><i class="fa-solid fa-circle-xmark"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function populateBookingTableSelect() {
+            const select = document.getElementById('booking-table-id');
+            select.innerHTML = '';
+            tables.forEach(t => {
+                select.innerHTML += `<option value="${t.id}">${t.name} (${t.capacity} seats - ${t.location})</option>`;
+            });
+        }
+
+        function openBookingModal(bookingId = null) {
+            populateBookingTableSelect();
+            document.getElementById('booking-form').reset();
+            document.getElementById('booking-id').value = '';
+            document.getElementById('modal-booking-title').textContent = bookingId ? 'Edit Reservation' : 'Create Reservation';
+
+            if(bookingId) {
+                const b = bookings.find(item => item.id === bookingId);
+                if(b) {
+                    document.getElementById('booking-id').value = b.id;
+                    document.getElementById('booking-cust-name').value = b.customer_name;
+                    document.getElementById('booking-cust-phone').value = b.customer_phone;
+                    document.getElementById('booking-table-id').value = b.table_id;
+                    document.getElementById('booking-party-size').value = b.party_size;
+                    document.getElementById('booking-date').value = b.date;
+                    document.getElementById('booking-time').value = b.time;
+                    document.getElementById('booking-amount').value = b.amount;
+                    document.getElementById('booking-status').value = b.status;
+                    document.getElementById('booking-requests').value = b.requests || '';
+                }
+            }
+            document.getElementById('modal-booking').classList.remove('hidden');
+        }
+
+        function saveBooking(e) {
+            e.preventDefault();
+            const id = document.getElementById('booking-id').value;
+            const customer_name = document.getElementById('booking-cust-name').value;
+            const customer_phone = document.getElementById('booking-cust-phone').value;
+            const table_id = parseInt(document.getElementById('booking-table-id').value);
+            const party_size = parseInt(document.getElementById('booking-party-size').value);
+            const date = document.getElementById('booking-date').value;
+            const time = document.getElementById('booking-time').value;
+            const amount = parseFloat(document.getElementById('booking-amount').value) || 0;
+            const status = document.getElementById('booking-status').value;
+            const requests = document.getElementById('booking-requests').value;
+
+            // Auto customer creation/update
+            let cust = customers.find(c => c.phone === customer_phone);
+            if(!cust) {
+                customers.push({
+                    id: customers.length + 1,
+                    name: customer_name,
+                    phone: customer_phone,
+                    email: `${customer_name.toLowerCase().replace(/\s+/g, '')}@example.in`,
+                    preferences: requests,
+                    total_visits: 1
+                });
+            } else {
+                cust.total_visits += 1;
+            }
+
+            if(id) {
+                const idx = bookings.findIndex(b => b.id == id);
+                if(idx !== -1) {
+                    bookings[idx] = { id: parseInt(id), table_id, customer_name, customer_phone, date, time, party_size, status, amount, requests };
+                    showToast('Booking updated');
+                }
+            } else {
+                const newId = bookings.length > 0 ? Math.max(...bookings.map(b => b.id)) + 1 : 101;
+                bookings.push({ id: newId, table_id, customer_name, customer_phone, date, time, party_size, status, amount, requests });
+                
+                // Add automated confirmation log
+                confirmationLogs.unshift(`[${new Date().toLocaleTimeString()}] Simulated Confirmation SMS sent to +91 ${customer_phone} for Booking #${newId}`);
+                showToast(`Booking #${newId} created! Confirmation sent via SMS`);
+            }
+
+            saveDataToStorage();
+            closeModal('modal-booking');
+            refreshAllViews();
+        }
+
+        function editBooking(id) {
+            openBookingModal(id);
+        }
+
+        function cancelBooking(id) {
+            if(confirm('Cancel this reservation?')) {
+                const b = bookings.find(item => item.id === id);
+                if(b) {
+                    b.status = 'Cancelled';
+                    saveDataToStorage();
+                    refreshAllViews();
+                    showToast('Reservation cancelled', 'info');
+                }
+            }
+        }
+
+        // -------------------------------------------------------------
+        // MODULE 6: BOOKING CALENDAR
+        // -------------------------------------------------------------
+        function renderCalendar() {
+            const year = currentCalendarDate.getFullYear();
+            const month = currentCalendarDate.getMonth();
+
+            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            document.getElementById('calendar-month-year').textContent = `${monthNames[month]} ${year}`;
+
+            const daysGrid = document.getElementById('calendar-days-grid');
+            daysGrid.innerHTML = '';
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            // Blank paddings
+            for(let i=0; i<firstDay; i++) {
+                daysGrid.innerHTML += `<div class="p-2 border border-slate-100 rounded-xl bg-slate-50 min-h-[70px]"></div>`;
+            }
+
+            for(let day=1; day<=daysInMonth; day++) {
+                const dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dayBookings = bookings.filter(b => b.date === dateStr && b.status !== 'Cancelled');
+
+                daysGrid.innerHTML += `
+                    <div class="p-2 border border-slate-200 rounded-xl bg-white min-h-[80px] flex flex-col justify-between">
+                        <div class="font-bold text-xs text-slate-700">${day}</div>
+                        ${dayBookings.length > 0 ? `
+                            <div class="mt-1">
+                                <span class="bg-brand-100 text-brand-700 font-bold px-1.5 py-0.5 rounded text-[10px] block truncate">
+                                    ${dayBookings.length} Bookings
+                                </span>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+        }
+
+        function changeCalendarMonth(delta) {
+            currentCalendarDate.setMonth(currentCalendarDate.getMonth() + delta);
+            renderCalendar();
+        }
+
+        // -------------------------------------------------------------
+        // MODULE 7: CUSTOMER MANAGEMENT
+        // -------------------------------------------------------------
+        function renderCustomers() {
+            const tbody = document.getElementById('customers-list-tbody');
+            tbody.innerHTML = '';
+
+            customers.forEach(c => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-4 font-semibold text-slate-800">${c.name}</td>
+                        <td class="p-4 text-slate-700 font-medium">${formatPhone(c.phone)}</td>
+                        <td class="p-4 text-slate-500">${c.email || 'N/A'}</td>
+                        <td class="p-4 font-bold text-brand-600">${c.total_visits} Visits</td>
+                        <td class="p-4 text-xs text-slate-500">${c.preferences || 'None'}</td>
+                        <td class="p-4 text-right">
+                            <button onclick="deleteCustomer(${c.id})" class="text-red-500 hover:text-red-700 p-1"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function openCustomerModal() {
+            document.getElementById('customer-form').reset();
+            document.getElementById('modal-customer').classList.remove('hidden');
+        }
+
+        function saveCustomer(e) {
+            e.preventDefault();
+            const name = document.getElementById('cust-name').value;
+            const phone = document.getElementById('cust-phone').value;
+            const email = document.getElementById('cust-email').value;
+            const preferences = document.getElementById('cust-pref').value;
+
+            const newId = customers.length > 0 ? Math.max(...customers.map(c => c.id)) + 1 : 1;
+            customers.push({ id: newId, name, phone, email, preferences, total_visits: 0 });
+
+            saveDataToStorage();
+            closeModal('modal-customer');
+            refreshAllViews();
+            showToast('Customer profile added');
+        }
+
+        function deleteCustomer(id) {
+            if(confirm('Delete customer profile?')) {
+                customers = customers.filter(c => c.id !== id);
+                saveDataToStorage();
+                refreshAllViews();
+                showToast('Customer deleted', 'info');
+            }
+        }
+
+        // -------------------------------------------------------------
+        // MODULE 8: REPORTS & REVENUE
+        // -------------------------------------------------------------
+        function renderReports() {
+            const completedBookings = bookings.filter(b => b.status === 'Completed' || b.status === 'Seated' || b.status === 'Confirmed');
+            const totalRev = completedBookings.reduce((acc, b) => acc + (Number(b.amount) || 0), 0);
+            const avgRev = completedBookings.length > 0 ? Math.round(totalRev / completedBookings.length) : 0;
+
+            document.getElementById('report-total-revenue').textContent = formatINR(totalRev);
+            document.getElementById('report-avg-revenue').textContent = formatINR(avgRev);
+
+            // Status Breakdown
+            const statusBreakdown = document.getElementById('report-status-breakdown');
+            statusBreakdown.innerHTML = '';
+
+            const statuses = ['Pending', 'Confirmed', 'Seated', 'Completed', 'Cancelled'];
+            statuses.forEach(s => {
+                const count = bookings.filter(b => b.status === s).length;
+                const pct = bookings.length > 0 ? Math.round((count / bookings.length) * 100) : 0;
+
+                statusBreakdown.innerHTML += `
+                    <div>
+                        <div class="flex justify-between text-xs font-semibold mb-1">
+                            <span>${s}</span>
+                            <span>${count} (${pct}%)</span>
+                        </div>
+                        <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                            <div class="bg-brand-500 h-full" style="width: ${pct}%"></div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Confirmation logs
+            const logsContainer = document.getElementById('report-logs');
+            logsContainer.innerHTML = confirmationLogs.map(l => `<p class="border-b border-slate-100 pb-1">${l}</p>`).join('');
+        }
+
+        function exportReport(type) {
+            showToast(`Generating ${type} report download...`, 'success');
+        }
+
+        // COMMON MODAL HELPERS
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            let bg = 'bg-slate-900 text-white';
+            if(type==='info') bg = 'bg-blue-600 text-white';
+
+            toast.className = `${bg} px-4 py-2.5 rounded-xl shadow-lg text-xs font-medium flex items-center space-x-2 transition-all duration-300 transform translate-y-2 opacity-0`;
+            toast.innerHTML = `<i class="fa-solid fa-circle-check"></i> <span>${message}</span>`;
+            
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
